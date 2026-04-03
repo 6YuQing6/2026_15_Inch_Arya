@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make)",
+      "Bash(grep:*)",
+      "Bash(ln:*)",
+      "Bash(make VERBOSE=1:*)",
+      "Bash(make clean:*)",
+      "Bash(export PATH=\"/Applications/VEXcode V5.app/Contents/Resources/toolchain/vexv5/osx/gcc/bin:$PATH\")",
+      "Bash(chmod:*)"
+    ]
+  }
+}
