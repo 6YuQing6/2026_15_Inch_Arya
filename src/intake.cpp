@@ -95,4 +95,3 @@ void outakeBallsBottom() { currentIntakeMode = IntakeMode::OUTTAKE_BOTTOM; }
 void outakeBallsTop()    { currentIntakeMode = IntakeMode::OUTTAKE_TOP; }
 void outakeBallsMiddle() { currentIntakeMode = IntakeMode::OUTTAKE_TOP_MIDDLE; }
 void stopIntake()        { currentIntakeMode = IntakeMode::STOPPED; }
-bool isMagazineFull()    { return OpticalTop.isNearObject(); }
