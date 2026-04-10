@@ -22,4 +22,3 @@ void outakeBallsBottom();
 void outakeBallsTop();
 void outakeBallsMiddle();
 void stopIntake();
-bool isMagazineFull();
