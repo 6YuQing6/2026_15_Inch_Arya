@@ -67,7 +67,7 @@ digital_out Aligner = digital_out(Brain.ThreeWirePort.B);
 
 // Sensors
 optical OpticalTop = optical(PORT4);
-optical OpticalBottom = optical(PORT1);
+optical OpticalBottom = optical(PORT2);
 optical OpticalBottom1 = optical(PORT6);
 distance MiddleSensor = distance(PORT3);
 
@@ -351,14 +351,14 @@ void isolation_Right_New() {
     stopIntake();
     MatchLoader.set(false);
 
-    // drives to bottom goal
-    chassis.drive_distance(15);
-    chassis.turn_to_angle(0);
-    chassis.drive_distance(18.25);
-    chassis.turn_to_point(0,0);
-    // chassis.turn_to_angle(225.0);
-    chassis.drive_distance(21.0);
-    outakeBallsBottom();
+    // // drives to bottom goal
+    // chassis.drive_distance(15);
+    // chassis.turn_to_angle(0);
+    // chassis.drive_distance(18.25);
+    // chassis.turn_to_point(0,0);
+    // // chassis.turn_to_angle(225.0);
+    // chassis.drive_distance(21.0);
+    // outakeBallsBottom();
 }
 
 void auto_Isolation(void) {
@@ -602,26 +602,25 @@ bool mbool = false;
 bool cbool = false;
 bool stopbool = false;
 void usercontrol(void) {
-  activeTeamColor = BallBlue;
   // change placeholder function to do whatever when intake is full
   IntakeFull(onIntakeFull);
   while (1) {
-    // if (Controller.ButtonR1.pressing()) {
-    //   intakeBalls();
-    // } else if (Controller.ButtonR2.pressing()) {
-    //   // outakes middle goal bottom, no sort
-    //   outakeBallsBottom();
-    // } else if (Controller.ButtonL1.pressing()) {
-    //   // outakes long goal
-    //   outakeBallsMiddle();
-    // } else if (Controller.ButtonL2.pressing()) {
-    //   // outakes middle goal top
-    //   outakeBallsTop();
-    // } else if (Controller.ButtonA.pressing()) {
-    //   intakeBallsSlow();
-    // } else {
-    //   stopIntake();
-    // }
+    if (Controller.ButtonR1.pressing()) {
+      intakeBalls();
+    } else if (Controller.ButtonR2.pressing()) {
+      // outakes middle goal bottom, no sort
+      outakeBallsBottom();
+    } else if (Controller.ButtonL1.pressing()) {
+      // outakes long goal
+      outakeBallsMiddle();
+    } else if (Controller.ButtonL2.pressing()) {
+      // outakes middle goal top
+      outakeBallsTop();
+    } else if (Controller.ButtonA.pressing()) {
+      intakeBallsSlow();
+    } else {
+      stopIntake();
+    }
 
     if (Controller.ButtonA.pressing()) {
       mbool = !mbool;
@@ -632,141 +631,6 @@ void usercontrol(void) {
     chassis.control_arcade();
 
     wait(20, msec);
-  }
-}
-
-void driverControl(void) {
-  static bool calibrated = false;
-  if(!calibrated) {
-    Controller.Screen.clearScreen();
-    Controller.Screen.setCursor(1, 1);
-    Controller.Screen.print("Calibrating GPS...");
-    GPS.calibrate();
-    waitUntil(!GPS.isCalibrating());
-    Controller.Screen.clearScreen();
-    Controller.Screen.setCursor(1, 1);
-    Controller.Screen.print("Ready!");
-    calibrated = true;
-  }
-  while (true) {
-    // Button A: toggle brain (start / stop)
-    if(Controller.ButtonA.pressing()){
-      waitUntil(!Controller.ButtonA.pressing());
-      if (matchBrain.isRunning()) {
-        matchBrain.stop();
-        Controller.Screen.clearScreen();
-        Controller.Screen.setCursor(1, 1);
-        Controller.Screen.print("Brain STOPPED");
-        wait(500, msec);
-      } else {
-        Controller.Screen.clearScreen();
-        Controller.Screen.setCursor(1, 1);
-        Controller.Screen.print("Up=Full  Down=SkipISO");
-        Controller.Screen.setCursor(2, 1);
-        Controller.Screen.print("B=Cancel");
-        int choice = 0; // 0=pending, 1=full, 2=skip, -1=cancel
-        while (choice == 0) {
-          if (Controller.ButtonUp.pressing()) {
-            waitUntil(!Controller.ButtonUp.pressing());
-            choice = 1;
-          } else if (Controller.ButtonDown.pressing()) {
-            waitUntil(!Controller.ButtonDown.pressing());
-            choice = 2;
-          } else if (Controller.ButtonB.pressing()) {
-            waitUntil(!Controller.ButtonB.pressing());
-            choice = -1;
-          }
-          wait(20, msec);
-        }
-        if (choice > 0) {
-          matchBrain.setSkipIsolation(choice == 2);
-          Controller.Screen.clearScreen();
-          Controller.Screen.print(choice == 1 ? "Brain: FULL MATCH" : "Brain: SKIP ISO");
-          wait(300, msec);
-          thread brainThread(brainThreadFunc);
-        } else {
-          Controller.Screen.clearScreen();
-          Controller.Screen.print("Cancelled");
-          wait(300, msec);
-        }
-      }
-    }
-
-    chassis.control_arcade();
-    if(Controller.ButtonDown.pressing()){
-      waitUntil(!Controller.ButtonDown.pressing());
-      testPathPlanning();
-      wait(500, msec);
-    }
-    if(Controller.ButtonUp.pressing()){
-      waitUntil(!Controller.ButtonUp.pressing());
-      pidtest();
-      wait(500, msec);
-    }
-    // Button X: test pure pursuit path following (NEW version)
-    if(Controller.ButtonX.pressing()){
-      waitUntil(!Controller.ButtonX.pressing());
-      testPurePursuit();
-      wait(500, msec);
-    }
-    // Button Left: test OLD pure pursuit (simpler, more aggressive)
-    if(Controller.ButtonLeft.pressing()){
-      waitUntil(!Controller.ButtonLeft.pressing());
-      testPurePursuitOld();
-      wait(500, msec);
-    }
-    // Button B: test drive_to_point (uses odometry synced to GPS)
-    if(Controller.ButtonB.pressing()){
-      waitUntil(!Controller.ButtonB.pressing());
-      testBoomerang();  // This function now uses drive_to_point
-      wait(500, msec);
-    }
-    // Button Y: test odometry - drive forward 10 inches
-    // if(Controller.ButtonY.pressing()){
-    //   waitUntil(!Controller.ButtonY.pressing());
-    //   // Set current heading from GPS, then drive forward 10 inches using odometry
-    //   chassis.set_heading(GPS.heading());
-    //   chassis.drive_distance(10);  // 10 inches forward using tracking wheels
-    //   wait(500, msec);
-    // }
-    // Button Y: test drive commands (front/back flip verification)
-    if(Controller.ButtonY.pressing()){
-      waitUntil(!Controller.ButtonY.pressing());
-      testDriveCommands();
-      wait(500, msec);
-    }
-    // Button L1: run multi-point path (hardcoded points)
-    if(Controller.ButtonL1.pressing()){
-      waitUntil(!Controller.ButtonL1.pressing());
-      runMultiPointPath();
-      wait(500, msec);
-    }
-    // runs user control (drive with controller)
-    if (Controller.ButtonL2.pressing()) {
-      waitUntil(!Controller.ButtonL1.pressing());
-      usercontrol();
-      wait(500, msec);
-    }
-    // Button R1: localization test
-    if(Controller.ButtonR1.pressing()){
-      waitUntil(!Controller.ButtonR1.pressing());
-      testLocalization();
-      wait(500, msec);
-    }
-    // Button R2: show localizer status (quick view)
-    if(Controller.ButtonR2.pressing()){
-      showLocalizerStatus();
-      wait(300, msec);
-    }
-    // Button Right: auto-calibrate at nearest corner
-    if(Controller.ButtonRight.pressing()){
-      waitUntil(!Controller.ButtonRight.pressing());
-      autoCalibrate();
-      wait(500, msec);
-    }
-    // Live odom readout on controller screen (line 3)
-    Controller.Screen.setCursor(3, 1);
-    Controller.Screen.print("X:%.1f Y:%.1f H:%.1f  ", chassis.get_X_position() * 2.54, chassis.get_Y_position() * 2.54, chassis.get_absolute_heading());
   }
 }
 
@@ -833,9 +697,10 @@ void debugLocalizerTest() {
     }
 }
 
-int main() {
-
-  // Ensure PID constants are initialized before any autonomous/path calls
+void pre_auton() {
+  activeTeamColor = BallBlue;
+  MatchLoader.set(false);
+    // Ensure PID constants are initialized before any autonomous/path calls
   configureChassis();
   
   // Wait for GPS to get valid reading, then sync IMU heading to GPS heading
@@ -894,16 +759,11 @@ int main() {
     Controller.Screen.setCursor(2, 1);
     Controller.Screen.print("Fallback: %.0f,%.0f", gpsX, gpsY);
   }
-  // wait(1000, msec);
   
   Controller.Screen.clearScreen();
   Controller.Screen.setCursor(1, 1);
   Controller.Screen.print("GPS H: %.1f", gpsHeading);
   wait(500, msec);
-
-  // // Pre-match: select team color
-  // OBJECT teamColor = MatchBrain::selectTeamColor();
-  // matchBrain.setTeamColor(teamColor);
 
   // Spawn background color-sort and intake threads
   thread colorTopThread(onTopDetectedThread);
@@ -912,6 +772,11 @@ int main() {
   colorTopThread.setPriority(11);
   thread intakeThread(intakeTask);
   intakeThread.setPriority(10);
+
+}
+
+int main() {
+  pre_auton();
 
   // local storage for latest data from the Jetson Nano
   static AI_RECORD local_map;
@@ -925,6 +790,12 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(auto_Isolation);
   Competition.drivercontrol(usercontrol);
+
+  // while(true) {
+  //   float remote_x, remote_y, remote_heading;
+  //   link.get_remote_location(remote_x, remote_y, remote_heading);
+  //   // printf("", remote_x, remote_y, remote_heading);
+  // }
 
   // this_thread::sleep_for(loop_time);
 

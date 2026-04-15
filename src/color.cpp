@@ -9,7 +9,7 @@ timer ColorSortTimer;
 directionType thirdStageDefaultDir = forward;
 bool thirdStageOverrideActive = false;
 
-int activeTeamColor = BallRed;
+int activeTeamColor = BallBlue;
 
 static int detectBallFromHue(int hue) {
   if ((hue >= 300 && hue <= 359) || (hue >= 0 && hue <= 50)) {
@@ -47,6 +47,9 @@ int onBottomDetectedThread() {
       int d0 = OpticalBottom.isNearObject() ? detectBallFromHue(hue0) : BallUndefined;
       int d1 = OpticalBottom1.isNearObject() ? detectBallFromHue(hue1) : BallUndefined;
 
+      printf("OpticalBottom0Hue: %d \n", hue0);
+      printf("OpticalBottom1Hue: %d \n", hue1);
+
       if (d0 == d1) {
         detected = d0;
       } else if (d0 == BallBlue || d1 == BallBlue) {
@@ -59,10 +62,14 @@ int onBottomDetectedThread() {
         detected = detectBallFromHue(avgHue);
       }
 
+      printf("Detected Ball Color: %d \n", detected);
+
       if (detected != activeTeamColor) {
         colorState = COLOR_EJECTING;
+        printf("Color Eject \n");
       } else {
         colorState = COLOR_IDLE;
+        printf("Color No Eject \n");
       }
     }
 
