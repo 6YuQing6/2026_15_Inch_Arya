@@ -60,9 +60,10 @@ smartdrive Drivetrain = smartdrive(LeftDrive, RightDrive, Inertial, 13.5, 13.5, 
 
 // Pneumatics
 digital_out MatchLoader = digital_out(Brain.ThreeWirePort.A);
-digital_out Expansion = digital_out(Brain.ThreeWirePort.C);
-digital_out ColorSort = digital_out(Brain.ThreeWirePort.B);
-digital_out Stopper = digital_out(Brain.ThreeWirePort.F);
+digital_out Expansion = digital_out(Brain.ThreeWirePort.H);
+digital_out ColorSort = digital_out(Brain.ThreeWirePort.G);
+digital_out Stopper = digital_out(Brain.ThreeWirePort.C);
+digital_out Aligner = digital_out(Brain.ThreeWirePort.B);
 
 // Sensors
 optical OpticalTop = optical(PORT4);
@@ -332,9 +333,37 @@ void isolation_Right() {
   outakeBallsTop();
 }
 
+// starts facing loader
+void isolation_Right_New() {
+    MatchLoader.set(true);
+    // drives to loader
+    chassis.drive_distance(32.5);
+    chassis.turn_to_angle(90);
+    intakeBalls();
+    chassis.drive_distance(10);
+    wait(3, sec);
+    
+    chassis.drive_distance(-15);
+    chassis.turn_to_angle(90);
+    chassis.drive_distance(-5.0);
+    outakeBallsTop();
+    wait(3, sec);
+    stopIntake();
+    MatchLoader.set(false);
+
+    // drives to bottom goal
+    chassis.drive_distance(15);
+    chassis.turn_to_angle(0);
+    chassis.drive_distance(18.25);
+    chassis.turn_to_point(0,0);
+    // chassis.turn_to_angle(225.0);
+    chassis.drive_distance(21.0);
+    outakeBallsBottom();
+}
+
 void auto_Isolation(void) {
   activeTeamColor = BallBlue;
-  isolation_Right();
+  isolation_Right_New();
   // int autonCase = 1;
   // switch (autonCase) {
   //   case 0:
@@ -577,22 +606,22 @@ void usercontrol(void) {
   // change placeholder function to do whatever when intake is full
   IntakeFull(onIntakeFull);
   while (1) {
-    if (Controller.ButtonR1.pressing()) {
-      intakeBalls();
-    } else if (Controller.ButtonR2.pressing()) {
-      // outakes middle goal bottom, no sort
-      outakeBallsBottom();
-    } else if (Controller.ButtonL1.pressing()) {
-      // outakes long goal
-      outakeBallsMiddle();
-    } else if (Controller.ButtonL2.pressing()) {
-      // outakes middle goal top
-      outakeBallsTop();
-    } else if (Controller.ButtonA.pressing()) {
-      intakeBallsSlow();
-    } else {
-      stopIntake();
-    }
+    // if (Controller.ButtonR1.pressing()) {
+    //   intakeBalls();
+    // } else if (Controller.ButtonR2.pressing()) {
+    //   // outakes middle goal bottom, no sort
+    //   outakeBallsBottom();
+    // } else if (Controller.ButtonL1.pressing()) {
+    //   // outakes long goal
+    //   outakeBallsMiddle();
+    // } else if (Controller.ButtonL2.pressing()) {
+    //   // outakes middle goal top
+    //   outakeBallsTop();
+    // } else if (Controller.ButtonA.pressing()) {
+    //   intakeBallsSlow();
+    // } else {
+    //   stopIntake();
+    // }
 
     if (Controller.ButtonA.pressing()) {
       mbool = !mbool;
@@ -865,7 +894,7 @@ int main() {
     Controller.Screen.setCursor(2, 1);
     Controller.Screen.print("Fallback: %.0f,%.0f", gpsX, gpsY);
   }
-  wait(1000, msec);
+  // wait(1000, msec);
   
   Controller.Screen.clearScreen();
   Controller.Screen.setCursor(1, 1);

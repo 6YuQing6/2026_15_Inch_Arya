@@ -64,7 +64,7 @@ void intakeTask() {
       case IntakeMode::OUTTAKE_TOP:
         Stopper.set(false);
         if (OpticalBottom1.isNearObject() || OpticalBottom.isNearObject()) {
-          ZeroStage.spin(vex::forward, 10, vex::percent);
+          ZeroStage.spin(vex::forward, 50, vex::percent);
         } else {
           ZeroStage.spin(vex::forward, 100, vex::percent);
         }
