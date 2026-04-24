@@ -50,7 +50,7 @@ motor_group RightDrive = motor_group(RightDriveA, RightDriveB, RightDriveC);
 motor FirstStage = motor(PORT8, ratio6_1, false);
 motor SecondStage = motor(PORT11, ratio6_1, false);
 motor ThirdStage = motor(PORT12, ratio6_1, false);
-motor ZeroStage = motor(PORT13, ratio6_1, false);
+motor ZeroStage = motor(PORT1, ratio6_1, false);
 
 // Inertial sensor
 inertial Inertial = inertial(PORT17);
@@ -58,12 +58,7 @@ inertial Inertial = inertial(PORT17);
 // Smartdrive
 smartdrive Drivetrain = smartdrive(LeftDrive, RightDrive, Inertial, 13.5, 13.5, 0.0, distanceUnits::in, 0.75);
 
-// Pneumatics
-digital_out MatchLoader = digital_out(Brain.ThreeWirePort.A);
-digital_out Expansion = digital_out(Brain.ThreeWirePort.H);
-digital_out ColorSort = digital_out(Brain.ThreeWirePort.G);
-digital_out Stopper = digital_out(Brain.ThreeWirePort.C);
-digital_out Aligner = digital_out(Brain.ThreeWirePort.B);
+
 
 // Sensors
 optical OpticalTop = optical(PORT4);
@@ -118,7 +113,7 @@ Drive chassis(
   
   //Gyro scale, this is what your gyro reads when you spin the robot 360 degrees.
   //For most cases 360 will do fine here, but this scale factor can be very helpful when precision is necessary.
-  360,
+  362,    // Inertial scale, value that reads after turning robot a full 360
   
   /*---------------------------------------------------------------------------*/
   /*                                  PAUSE!                                   */
@@ -171,15 +166,19 @@ MatchBrain matchBrain;
 // Configure chassis PID/voltage limits with optimized tuning
 void configureChassis(){
   //SUNNY VALUES
-  chassis.set_turn_constants(12, 0.35, 0, 2.2, 15);
+  // chassis.set_turn_constants(10, 0.35, 0, 2.4, 15);
+  // chassis.set_turn_constants(10, 0.48, 0.02, 5.8, 15);
+  chassis.set_turn_constants(10, 0.26, 0.01, 2.5, 0);
+  // chassis.set_turn_constants(10, 0.34, 0.0, 2.45, 0);
+
   chassis.set_heading_constants(6, 0.4, 0, 1, 0);
-  chassis.set_drive_constants(12, 1.5, 0, 10, 0);
+  // chassis.set_drive_constants(12, 1.5, 0, 10, 0);
   chassis.set_swing_constants(12, .3, .001, 2, 15);
   // Tighter exit conditions for better accuracy
   // drive: 1.0 inch settle error (~2.5cm)
-  chassis.set_drive_exit_conditions(1.0, 500, 3000);
+  chassis.set_drive_exit_conditions(1.0, 300, 1500);
   // turn: 2.0 degree settle error (tightened from 3.0)
-  chassis.set_turn_exit_conditions(2.0, 200, 2000);
+  chassis.set_turn_exit_conditions(1.0, 500, 1500);
   chassis.set_swing_exit_conditions(2.0, 200, 2000); 
   // Boomerang controller constants for drive_to_pose
   // lead: 0.3 = carrot point leads by 30% of distance (lower = more direct path)
@@ -188,6 +187,8 @@ void configureChassis(){
 
   //ARYA OG VALUES
   // chassis.set_drive_constants(12, 0.550, 0.040, 0.570, 0);
+  chassis.set_drive_constants(12, 0.55, 0.04, 3.9, 0);
+
   // chassis.set_heading_constants(4, 0.15, 0.0, 0.02, 0);
   // chassis.set_turn_constants(8, 0.090, 0.120, 0.260, 0);
   // chassis.set_swing_constants(8, 0.090, 0.120, 0.260, 0);
@@ -334,36 +335,83 @@ void isolation_Right() {
 }
 
 // starts facing loader
-void isolation_Right_New() {
+void isolation_Right_New_RED() {
+    chassis.set_coordinates(-49.5, -16.8, chassis.get_absolute_heading());
     MatchLoader.set(true);
+    // chassis.turn_to_angle(180);
+
     // drives to loader
-    chassis.drive_distance(32.5);
-    chassis.turn_to_angle(90);
+    chassis.drive_to_point(-49.5, -48);
+    // chassis.drive_distance(32);
+
+    // intakes from loader
+    chassis.turn_to_point(-100, -48);
+    // chassis.turn_to_angle(-90);
     intakeBalls();
-    chassis.drive_distance(10);
+    chassis.drive_distance(12);
     wait(3, sec);
     
+    // scores in long goal
     chassis.drive_distance(-15);
-    chassis.turn_to_angle(90);
-    chassis.drive_distance(-5.0);
+    // chassis.turn_to_point(-100, -47);
+    chassis.turn_to_angle(-90);
+    chassis.drive_max_voltage = 12;
+    // chassis.drive_to_point(-28, -47);
+    chassis.drive_distance(-24.0);
     outakeBallsTop();
-    wait(3, sec);
+    wait(0.5, sec);
+
+    // turns to middle goal
     stopIntake();
+    chassis.turn_to_point(-100, -48);
+    // chassis.turn_to_angle(-90);
     MatchLoader.set(false);
 
-    // // drives to bottom goal
-    // chassis.drive_distance(15);
-    // chassis.turn_to_angle(0);
-    // chassis.drive_distance(18.25);
-    // chassis.turn_to_point(0,0);
-    // // chassis.turn_to_angle(225.0);
-    // chassis.drive_distance(21.0);
-    // outakeBallsBottom();
+    // drives to middle goal, pushes tower of balls away
+    chassis.drive_to_point(-49.5,-48);
+    // chassis.drive_distance(22);
+    // chassis.turn_to_point(-24,-24);
+    chassis.turn_to_angle(45);
+    MatchLoader.set(true);
+    // chassis.drive_to_point(-24, -24);
+
+    // drives into bottom goal and scores
+    chassis.drive_distance(36);
+    chassis.turn_to_point(0,0);
+    // chassis.turn_to_angle(45);
+    chassis.drive_max_voltage = 6;
+    MatchLoader.set(false);
+    chassis.drive_distance(15);
+    outakeBallsBottom();
 }
 
 void auto_Isolation(void) {
-  activeTeamColor = BallBlue;
-  isolation_Right_New();
+  // activeTeamColor = BallRed;
+  isolation_Right_New_RED();
+  // chassis.set_heading(0);
+  // chassis.turn_to_angle(90);
+  // chassis.turn_to_angle(180);
+  // chassis.turn_to_angle(0);
+  // chassis.set_coordinates(0,0,0);
+  // chassis.drive_to_point(0, 12);
+  // chassis.drive_to_point(0, 24);
+  // chassis.drive_to_point(0, 48);
+  // chassis.drive_to_point(0,0);
+  // chassis.turn_to_point(0, 90);
+  // chassis.turn_to_point(90, 90);
+  // chassis.turn_to_point(90, 0);
+  // chassis.turn_to_point(0, -90);
+  // chassis.turn_to_point(0, 90);
+
+
+
+
+  // chassis.turn_to_point(-48,-48);
+  // chassis.turn_to_point(-24,-48);
+  // chassis.turn_to_point(0,0);
+
+
+  // chassis.turn_to_point(0, 0);
   // int autonCase = 1;
   // switch (autonCase) {
   //   case 0:
@@ -605,28 +653,34 @@ void usercontrol(void) {
   // change placeholder function to do whatever when intake is full
   IntakeFull(onIntakeFull);
   while (1) {
-    if (Controller.ButtonR1.pressing()) {
+    // if (Controller.ButtonR1.pressing()) {
       intakeBalls();
-    } else if (Controller.ButtonR2.pressing()) {
-      // outakes middle goal bottom, no sort
-      outakeBallsBottom();
-    } else if (Controller.ButtonL1.pressing()) {
-      // outakes long goal
-      outakeBallsMiddle();
-    } else if (Controller.ButtonL2.pressing()) {
-      // outakes middle goal top
-      outakeBallsTop();
-    } else if (Controller.ButtonA.pressing()) {
-      intakeBallsSlow();
-    } else {
-      stopIntake();
-    }
+    // } else if (Controller.ButtonR2.pressing()) {
+    //   // outakes middle goal bottom, no sort
+    //   outakeBallsBottom();
+    // } else if (Controller.ButtonL1.pressing()) {
+    //   // outakes long goal
+    //   outakeBallsMiddle();
+    // } else if (Controller.ButtonL2.pressing()) {
+    //   // outakes middle goal top
+    //   outakeBallsTop();
+    // } else if (Controller.ButtonA.pressing()) {
+    //   intakeBallsSlow();
+    // } else {
+    //   stopIntake();
+    // }
 
     if (Controller.ButtonA.pressing()) {
       mbool = !mbool;
       waitUntil(!Controller.ButtonA.pressing());
     }
     MatchLoader.set(mbool);
+
+    // if (Controller.ButtonY.pressing()) {
+    //   stopbool = !stopbool;
+    //   waitUntil(!Controller.ButtonY.pressing());
+    // }
+    // Stopper.set(stopbool);
 
     chassis.control_arcade();
 
@@ -698,8 +752,9 @@ void debugLocalizerTest() {
 }
 
 void pre_auton() {
-  activeTeamColor = BallBlue;
+  activeTeamColor = BallRed;
   MatchLoader.set(false);
+  Aligner.set(true);
     // Ensure PID constants are initialized before any autonomous/path calls
   configureChassis();
   
@@ -741,6 +796,8 @@ void pre_auton() {
   
   chassis.set_heading(gpsHeading);
   Inertial.setHeading(gpsHeading, degrees);
+
+  printf("Heading: %f", gpsHeading);
   
   // Initialize Localizer with current GPS position
   Controller.Screen.clearScreen();
@@ -794,7 +851,7 @@ int main() {
   // while(true) {
   //   float remote_x, remote_y, remote_heading;
   //   link.get_remote_location(remote_x, remote_y, remote_heading);
-  //   // printf("", remote_x, remote_y, remote_heading);
+  //   printf("", remote_x, remote_y, remote_heading);
   // }
 
   // this_thread::sleep_for(loop_time);
@@ -804,6 +861,9 @@ int main() {
   // int     staleCycles     = 0;
   // bool    jetsonAlerted   = false;
 
+  while (true) {
+    printf("x: %f, y: %f, h: %f \n", chassis.get_X_position(), chassis.get_Y_position(), Inertial.heading());
+  }
   // while(1) {
   //     // get last map data
   //     jetson_comms.get_data( &local_map );

@@ -12,12 +12,12 @@ void intakeTask() {
   while (true) {
     switch (currentIntakeMode) {
       case IntakeMode::INTAKE:
-        Stopper.set(true);
+        Stopper.set(false);
         if (middleStopped && topStopped && (OpticalBottom1.isNearObject() || OpticalBottom.isNearObject())) {
           ZeroStage.stop(coast);
           IntakeFull.broadcast();
         } else if (OpticalBottom1.isNearObject() || OpticalBottom.isNearObject()) {
-          ZeroStage.spin(vex::forward, 50, vex::percent);
+          ZeroStage.spin(vex::forward, 80, vex::percent);
         } else {
           ZeroStage.spin(vex::forward, 100, vex::percent);
         }
@@ -40,7 +40,7 @@ void intakeTask() {
         break;
 
       case IntakeMode::INTAKE_SLOW:
-        Stopper.set(true);
+        Stopper.set(false);
         ZeroStage.spin(vex::forward, 60, vex::percent);
         FirstStage.spin(vex::forward, 60, vex::percent);
         if (OpticalTop.isNearObject()) {
@@ -62,7 +62,7 @@ void intakeTask() {
 
       case IntakeMode::OUTTAKE_TOP_MIDDLE:
       case IntakeMode::OUTTAKE_TOP:
-        Stopper.set(false);
+        Stopper.set(true);
         if (OpticalBottom1.isNearObject() || OpticalBottom.isNearObject()) {
           ZeroStage.spin(vex::forward, 50, vex::percent);
         } else {
@@ -78,6 +78,7 @@ void intakeTask() {
         break;
 
       case IntakeMode::STOPPED:
+        // Stopper.set(true);
         ZeroStage.stop(vex::coast);
         FirstStage.stop(vex::brake);
         SecondStage.stop(vex::brake);
@@ -85,7 +86,7 @@ void intakeTask() {
         break;
     }
 
-    vex::task::sleep(100);
+    vex::task::sleep(50);
   }
 }
 

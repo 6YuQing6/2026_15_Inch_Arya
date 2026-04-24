@@ -39,6 +39,7 @@ extern digital_out MatchLoader;
 extern digital_out Expansion;
 extern digital_out ColorSort;
 extern digital_out Stopper;
+extern digital_out Aligner;
 
 //Sensors
 extern optical OpticalTop;
