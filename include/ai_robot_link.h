@@ -35,9 +35,9 @@ namespace ai {
 
         // this demo only send simple x, y and heading information to the partner robot
         // use these functions to get/set the data
-        void set_remote_location( float x, float y, float heading, int32_t status );
-        void get_local_location( float &x, float &y, float &heading, int32_t &status );
-        void get_remote_location( float &x, float &y, float &heading );
+        void set_remote_location( float x, float y, float heading, int32_t status, bool is_stuck );
+        void get_local_location( float &x, float &y, float &heading, int32_t &status);
+        void get_remote_location( float &x, float &y, float &heading, bool &is_stuck );
 
         // header for packets, 6 bytes
         typedef struct __attribute__((__packed__)) _packet_header {
@@ -59,6 +59,8 @@ namespace ai {
         // frequently so alternate packets could be created to avoid sending lots of
         // redundant information.
         #define   RL_LOCATION_PACKET    1
+        #define RL_DETECTIONS_PACKET 2
+        #define MAX_LINK_DETECTIONS 5 // 5 * 12 = 60 bytes + 1 byte count = 61 bytes
 
         // payload in a type RL_LOCATION_PACKET (only type in this demo)
         // payload is 12 bytes
@@ -66,6 +68,7 @@ namespace ai {
             float      loc_x;  
             float      loc_y;
             float      heading;  
+            uint8_t    is_stuck;  // SOS flag, 1 = stuck, 0 = not stuck
         } packet_1_payload;
 
         // full type RL_LOCATION_PACKET packet, location data
@@ -74,6 +77,28 @@ namespace ai {
             packet_header     header;
             packet_1_payload  payload;
         } packet_1_t;
+
+        // payload in a type RL_DETECTIONS_PACKET 
+        typedef struct __attribute__((__packed__)) _detection_pos {
+          float x;
+          float y;
+          float z;
+        } detection_pos;
+
+        typedef struct __attribute__((__packed__)) _packet_2_payload {
+          uint8_t count;
+          detection_pos detections[MAX_LINK_DETECTIONS]; 
+        } packet_2_payload;
+
+        typedef struct __attribute__((__packed__)) _packet_2_t {
+          packet_header header;
+          packet_2_payload payload;
+        } packet_2_t;
+
+        // sends object x,y,z location to partner robot
+        void set_remote_detections(const DETECTION_OBJECT *detections, int32_t count);
+        void get_remote_detections(detection_pos *out_detections, int32_t &out_count);
+        void get_local_detections(detection_pos *out_detections, int32_t &out_count);
 
       private:
         // states for the packet decode finite state machine
@@ -93,6 +118,8 @@ namespace ai {
         // and they both send location to the other
         packet_1_t    packet_tx_1;
         packet_1_t    packet_rx_1;
+        packet_2_t    packet_tx_2;
+        packet_2_t    packet_rx_2;
 
         // rx related variables
         comms_state   state;      // state of rx decoding
@@ -113,6 +140,7 @@ namespace ai {
         // local storage for decoding
         union {
           packet_1_payload  pak_1;
+          packet_2_payload  pak_2;
           uint8_t           bytes[256];  // 256 byte max packet size
         } payload;
 

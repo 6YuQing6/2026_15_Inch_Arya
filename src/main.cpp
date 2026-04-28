@@ -345,25 +345,40 @@ void isolation_Right_New_RED() {
     // chassis.drive_distance(32);
 
     // intakes from loader
-    chassis.turn_to_point(-100, -48);
-    // chassis.turn_to_angle(-90);
+    // chassis.turn_to_point(-100, -48);
+    chassis.turn_settle_error = 2.0;
+    chassis.turn_settle_time = 300;
+    chassis.turn_timeout = 1000;
+    chassis.turn_to_angle(-90);
+    chassis.turn_settle_time = 500;
+    chassis.turn_timeout = 1500;
+    chassis.turn_settle_error = 1.0;
     intakeBalls();
-    chassis.drive_distance(12);
-    wait(3, sec);
+    chassis.drive_timeout = 500;
+    chassis.drive_settle_time = 0;
+    chassis.drive_distance(11);
+    wait(3.2, sec);
     
     // scores in long goal
-    chassis.drive_distance(-15);
+    // chassis.drive_timeout = 500;
+    // chassis.drive_distance(-15);
     // chassis.turn_to_point(-100, -47);
-    chassis.turn_to_angle(-90);
-    chassis.drive_max_voltage = 12;
+    // chassis.turn_to_angle(-90);
+    chassis.drive_max_voltage = 10;
     // chassis.drive_to_point(-28, -47);
-    chassis.drive_distance(-24.0);
+    chassis.drive_timeout = 900;
+    chassis.drive_settle_time = 0;
+    chassis.drive_distance(-39.0);
+    chassis.drive_max_voltage = 12;
+    chassis.drive_settle_time = 300;
+    // chassis.drive_distance(-24.0);
+    chassis.drive_timeout = 1000;
     outakeBallsTop();
-    wait(0.5, sec);
+    wait(0.7, sec);
 
     // turns to middle goal
-    stopIntake();
-    chassis.turn_to_point(-100, -48);
+    // chassis.turn_to_point(-100, -48);
+    intakeBalls();
     // chassis.turn_to_angle(-90);
     MatchLoader.set(false);
 
@@ -372,17 +387,21 @@ void isolation_Right_New_RED() {
     // chassis.drive_distance(22);
     // chassis.turn_to_point(-24,-24);
     chassis.turn_to_angle(45);
+    // stopIntake();
     MatchLoader.set(true);
     // chassis.drive_to_point(-24, -24);
 
     // drives into bottom goal and scores
-    chassis.drive_distance(36);
-    chassis.turn_to_point(0,0);
+    chassis.drive_settle_time = 0;
+    // chassis.drive_timeout = 00;
+    // chassis.drive_distance(36);
+    chassis.drive_distance(40);
+    outakeBallsBottom();
+    // chassis.turn_to_point(0,0);
     // chassis.turn_to_angle(45);
     chassis.drive_max_voltage = 6;
     MatchLoader.set(false);
     chassis.drive_distance(15);
-    outakeBallsBottom();
 }
 
 void auto_Isolation(void) {
@@ -653,22 +672,22 @@ void usercontrol(void) {
   // change placeholder function to do whatever when intake is full
   IntakeFull(onIntakeFull);
   while (1) {
-    // if (Controller.ButtonR1.pressing()) {
+    if (Controller.ButtonR1.pressing()) {
       intakeBalls();
-    // } else if (Controller.ButtonR2.pressing()) {
-    //   // outakes middle goal bottom, no sort
-    //   outakeBallsBottom();
-    // } else if (Controller.ButtonL1.pressing()) {
-    //   // outakes long goal
-    //   outakeBallsMiddle();
-    // } else if (Controller.ButtonL2.pressing()) {
-    //   // outakes middle goal top
-    //   outakeBallsTop();
-    // } else if (Controller.ButtonA.pressing()) {
-    //   intakeBallsSlow();
-    // } else {
-    //   stopIntake();
-    // }
+    } else if (Controller.ButtonR2.pressing()) {
+      // outakes middle goal bottom, no sort
+      outakeBallsBottom();
+    } else if (Controller.ButtonL1.pressing()) {
+      // outakes long goal
+      outakeBallsMiddle();
+    } else if (Controller.ButtonL2.pressing()) {
+      // outakes middle goal top
+      outakeBallsTop();
+    } else if (Controller.ButtonA.pressing()) {
+      intakeBallsSlow();
+    } else {
+      stopIntake();
+    }
 
     if (Controller.ButtonA.pressing()) {
       mbool = !mbool;

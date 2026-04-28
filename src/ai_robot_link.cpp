@@ -81,14 +81,37 @@ robot_link::get_tx_errors() {
 /** @brief  Set data to be sent to remote robot                              */
 /*---------------------------------------------------------------------------*/
 void
-robot_link::set_remote_location( float x, float y, float heading, int32_t status ) {
+robot_link::set_remote_location( float x, float y, float heading, int32_t status, bool is_stuck ) {
     txlock.lock();
-    packet_tx_1.payload.loc_x = x;
-    packet_tx_1.payload.loc_y = y;
-    packet_tx_1.payload.heading = heading;
-    local_gps_status = status;
+    packet_tx_1.payload.loc_x    = x;
+    packet_tx_1.payload.loc_y    = y;
+    packet_tx_1.payload.heading  = heading;
+    packet_tx_1.payload.is_stuck = (uint8_t)is_stuck;
+    local_gps_status             = status;
     txlock.unlock();
 }
+
+
+/*---------------------------------------------------------------------------*/
+/** @brief  Set detection data to be sent to remote robot                    */
+/*---------------------------------------------------------------------------*/
+void
+robot_link::set_remote_detections( const DETECTION_OBJECT *detections, int32_t count ) {
+    // clamp to the max we can fit in a single packet
+    // later on need to filter by already detected positions so don't send multiple of same ball
+    if( count > MAX_LINK_DETECTIONS )
+        count = MAX_LINK_DETECTIONS;
+ 
+    txlock.lock();
+    packet_tx_2.payload.count = (uint8_t)count;
+    for( int32_t i = 0; i < count; i++ ) {
+        packet_tx_2.payload.detections[i].x = detections[i].mapLocation.x;
+        packet_tx_2.payload.detections[i].y = detections[i].mapLocation.y;
+        packet_tx_2.payload.detections[i].z = detections[i].mapLocation.z;
+    }
+    txlock.unlock();
+}
+
 
 /*---------------------------------------------------------------------------*/
 /** @brief  Get data to be sent to remote robot                              */
@@ -104,16 +127,44 @@ robot_link::get_local_location( float &x, float &y, float &heading, int32_t &sta
 }
 
 /*---------------------------------------------------------------------------*/
+/** @brief  Get the detection data queued for transmission (local copy)      */
+/*---------------------------------------------------------------------------*/
+void
+robot_link::get_local_detections( detection_pos *out_detections, int32_t &out_count ) {
+    txlock.lock();
+    out_count = (int32_t)packet_tx_2.payload.count;
+    for( int32_t i = 0; i < out_count; i++ ) {
+        out_detections[i] = packet_tx_2.payload.detections[i];
+    }
+    txlock.unlock();
+}
+
+/*---------------------------------------------------------------------------*/
 /** @brief  Get data received from the remote robot                          */
 /*---------------------------------------------------------------------------*/
 void
-robot_link::get_remote_location( float &x, float &y, float &heading ) {
+robot_link::get_remote_location( float &x, float &y, float &heading, bool &is_stuck ) {
     rxlock.lock();
-    x = packet_rx_1.payload.loc_x;
-    y = packet_rx_1.payload.loc_y;
-    heading = packet_rx_1.payload.heading;
+    x        = packet_rx_1.payload.loc_x;
+    y        = packet_rx_1.payload.loc_y;
+    heading  = packet_rx_1.payload.heading;
+    is_stuck = (bool)packet_rx_1.payload.is_stuck;
     rxlock.unlock();
 }
+
+/*---------------------------------------------------------------------------*/
+/** @brief  Get detection data received from the remote robot                */
+/*---------------------------------------------------------------------------*/
+void
+robot_link::get_remote_detections( detection_pos *out_detections, int32_t &out_count ) {
+    rxlock.lock();
+    out_count = (int32_t)packet_rx_2.payload.count;
+    for( int32_t i = 0; i < out_count; i++ ) {
+        out_detections[i] = packet_rx_2.payload.detections[i];
+    }
+    rxlock.unlock();
+}
+
 
 /*---------------------------------------------------------------------------*/
 /** @brief  process some received data                                       */
@@ -223,9 +274,12 @@ robot_link::process( uint8_t data ) {
           rxlock.unlock();
         }
         else
-        if( payload_type == 2 ) {
-          // perhaps other packet types
-        }
+          if( payload_type == RL_DETECTIONS_PACKET ) {        // <-- ADD THIS
+              rxlock.lock();
+              memcpy( &packet_rx_2.payload, &payload.pak_2, sizeof(packet_2_payload));
+              rxlock.unlock();
+          }
+
 
         // timestamp this packet
         last_packet_time = timer.system();
@@ -303,18 +357,40 @@ robot_link::tx_task( void *arg ) {
                                         } 
                             };
 
+    // --- initialise detections packet ---
+    instance->packet_tx_2 = { .header = {
+                                            .sync   = { static_cast<uint8_t>(sync_byte::kSync1),
+                                                        static_cast<uint8_t>(sync_byte::kSync2) },
+                                            .type   = RL_DETECTIONS_PACKET,
+                                            .length = sizeof(packet_2_payload)
+                                        }
+                            };
+
     // wait for initial connection
     while( !instance->isLinked() ) {
       this_thread::sleep_for(50);
     }
 
     // we periodically send the same packet to the partner robot
-    // A RL_LOCATION_PACKET is 18 bytes, max bandwidth is approx 520 bytes/second (worker->manager)
+    // A RL_LOCATION_PACKET is 19 bytes, max bandwidth is approx 520 bytes/second (worker->manager)
     // so we can send at most 28 packets per second without loosing data
     // In practise this can be lowered to 15Hz (or lower) as that's the rate that the Jetson will update locations
     // We will use 10 packets/second in this example
+
+          // Alternate between the two packet types each loop iteration.
+      // packet_1 = 18 B (location), packet_2 = 67 B (5 detections, 6B header + 61B payload)
+      //
+      // Sending both at 10 Hz: 19*10 + 67*10 = 860 B/s  <-- exceeds ~520 B/s limit
+      //
+      // Strict alternation at 5 Hz each:
+      //   bandwidth = (19 + 67) * 5 = 430 B/s            <-- safely within limit
+      //
+
     //
-    int loops_sec = 10;
+    // int loops_sec = 10;
+    int    loops_sec  = 5;   // 5 alternating pairs per second
+    bool   send_detections = false;
+
 
     while(1) {
       // mutex is not really need, but it's good practise for RTOS so we will keep it
@@ -324,20 +400,46 @@ robot_link::tx_task( void *arg ) {
       // serial_link class has crc32 generator included as protected member function
       // we can use as we are a sub class of serial_link
       // we truncate to 16 bit to save space in the packet
-      instance->packet_tx_1.header.crc = (uint16_t)instance->crc32((uint8_t *)&instance->packet_tx_1.payload, sizeof(packet_1_payload), 0 );
+      // instance->packet_tx_1.header.crc = (uint16_t)instance->crc32((uint8_t *)&instance->packet_tx_1.payload, sizeof(packet_1_payload), 0 );
 
-      // send the data, check for success
-      if( instance->send( (uint8_t *)&instance->packet_tx_1, sizeof(packet_1_t) ) > 0 ) {
-        instance->tx_packets++;
+      if( !send_detections ) {
+          // --- send location packet ---
+          instance->packet_tx_1.header.crc =
+              (uint16_t)instance->crc32( (uint8_t *)&instance->packet_tx_1.payload,
+                                          sizeof(packet_1_payload), 0 );
+          if( instance->send( (uint8_t *)&instance->packet_tx_1, sizeof(packet_1_t) ) > 0 )
+              instance->tx_packets++;
+          else
+              instance->tx_errors++;
       }
       else {
-        instance->tx_errors++;
+          // --- send detections packet ---
+          instance->packet_tx_2.header.crc =
+              (uint16_t)instance->crc32( (uint8_t *)&instance->packet_tx_2.payload,
+                                          sizeof(packet_2_payload), 0 );
+          if( instance->send( (uint8_t *)&instance->packet_tx_2, sizeof(packet_2_t) ) > 0 )
+              instance->tx_packets++;
+          else
+              instance->tx_errors++;
       }
 
-      // release the mutex
       instance->txlock.unlock();
 
-      // loop rate approx 10Hz
-      this_thread::sleep_for( 1000/loops_sec );
+      send_detections = !send_detections;
+      this_thread::sleep_for( 1000 / loops_sec );
+
+      // // send the data, check for success
+      // if( instance->send( (uint8_t *)&instance->packet_tx_1, sizeof(packet_1_t) ) > 0 ) {
+      //   instance->tx_packets++;
+      // }
+      // else {
+      //   instance->tx_errors++;
+      // }
+
+      // // release the mutex
+      // instance->txlock.unlock();
+
+      // // loop rate approx 10Hz
+      // this_thread::sleep_for( 1000/loops_sec );
     }
 }
