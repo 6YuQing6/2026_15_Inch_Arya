@@ -151,7 +151,7 @@ dashboardVexlink( int ox, int oy, int width, int height ) {
   oy += 5;
   Brain.Screen.printAt( ox + 10, oy += 15, "Location: remote");
   
-  link.get_remote_location(x, y, heading);
+  // link.get_remote_location(x, y, heading, );
   
   Brain.Screen.printAt( ox + 10, oy += 15, " X:   %.2f", x /*/ -25.4*/);  // mm -> inches
   Brain.Screen.printAt( ox + 10, oy += 15, " Y:   %.2f", y /*/ -25.4*/);  // mm -> inches

@@ -12,10 +12,11 @@ bool thirdStageOverrideActive = false;
 int activeTeamColor = BallBlue;
 
 static int detectBallFromHue(int hue) {
-  if ((hue >= 300 && hue <= 359) || (hue >= 0 && hue <= 50)) {
+  // if ((hue >= 300 && hue <= 359) || (hue >= 0 && hue <= 50)) {
+  if ((hue >= 0 && hue <= 11)) {
     return BallRed;
   }
-  if (hue >= 140 && hue <= 278) {
+  if (hue >= 140 && hue <= 290) {
     return BallBlue;
   }
   return BallUndefined;
@@ -44,25 +45,30 @@ int onBottomDetectedThread() {
       int avgHue = (hue0 + hue1) / 2;
       int detected = BallUndefined;
 
+    printf("Prox0: %d Prox1: %d\n", 
+    vexOpticalProximityGet(OpticalBottom.index()),
+    vexOpticalProximityGet(OpticalBottom1.index()));
+
       int d0 = OpticalBottom.isNearObject() ? detectBallFromHue(hue0) : BallUndefined;
       int d1 = OpticalBottom1.isNearObject() ? detectBallFromHue(hue1) : BallUndefined;
 
       printf("OpticalBottom0Hue: %d \n", hue0);
       printf("OpticalBottom1Hue: %d \n", hue1);
 
-      if (d0 == d1) {
+      if (d0 == d1 && (d0 != BallUndefined && d1 != BallUndefined)) {
         detected = d0;
       } else if (d0 == BallBlue || d1 == BallBlue) {
         detected = BallBlue;
-      } else if (d0 != BallUndefined) {
+      } else if (d0 != BallUndefined && d1 == BallUndefined) {
         detected = d0;
-      } else if (d1 != BallUndefined) {
+      } else if (d1 != BallUndefined && d0 == BallUndefined) {
         detected = d1;
       } else {
         detected = detectBallFromHue(avgHue);
       }
 
       printf("Detected Ball Color: %d \n", detected);
+      // printf("Active team color: %d \n", activeTeamColor);
 
       if (detected != activeTeamColor) {
         colorState = COLOR_EJECTING;
@@ -122,6 +128,7 @@ int onTopDetectedThread() {
       }
 
       case COLOR_EJECTING: {
+        wait(500, msec);
         thirdStageOverrideActive = true;
         if (thirdStageDefaultDir == forward) {
           ThirdStage.spin(reverse, 12000, voltageUnits::mV);

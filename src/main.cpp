@@ -374,7 +374,7 @@ void isolation_Right_New_RED() {
     // chassis.drive_distance(-24.0);
     chassis.drive_timeout = 1000;
     outakeBallsTop();
-    wait(0.7, sec);
+    wait(1.9, sec);
 
     // turns to middle goal
     // chassis.turn_to_point(-100, -48);
@@ -404,9 +404,117 @@ void isolation_Right_New_RED() {
     chassis.drive_distance(15);
 }
 
+// starts facing loader
+void isolation_Right_New_BLUE() {
+    chassis.set_coordinates(49.5, 16.8, chassis.get_absolute_heading());
+    MatchLoader.set(true);
+    // chassis.turn_to_angle(180);
+
+    // drives to loader
+    chassis.drive_to_point(49.5, 48);
+    // chassis.drive_distance(32);
+
+    // intakes from loader
+    // chassis.turn_to_point(-100, -48);
+    chassis.turn_settle_error = 2.0;
+    chassis.turn_settle_time = 300;
+    chassis.turn_timeout = 1000;
+    chassis.turn_to_angle(90);
+    chassis.turn_settle_time = 500;
+    chassis.turn_timeout = 1500;
+    chassis.turn_settle_error = 1.0;
+    intakeBalls();
+    chassis.drive_timeout = 500;
+    chassis.drive_settle_time = 0;
+    chassis.drive_distance(11);
+    wait(3.2, sec);
+    
+    // scores in long goal
+    chassis.drive_max_voltage = 10;
+    chassis.drive_timeout = 900;
+    chassis.drive_settle_time = 0;
+    chassis.drive_distance(-39.0);
+    chassis.drive_max_voltage = 12;
+    chassis.drive_settle_time = 300;
+    chassis.drive_timeout = 1000;
+    outakeBallsTop();
+    wait(1.9, sec);
+
+    // turns to middle goal
+    intakeBalls();
+    MatchLoader.set(false);
+
+    // drives to middle goal, pushes tower of balls away
+    chassis.drive_to_point(49.5,48);
+    chassis.turn_to_angle(225);
+    MatchLoader.set(true);
+
+    // drives into bottom goal and scores
+    chassis.drive_settle_time = 0;
+    chassis.drive_distance(40);
+    outakeBallsBottom();
+    chassis.drive_max_voltage = 6;
+    MatchLoader.set(false);
+    chassis.drive_distance(16);
+}
+
+// starts facing loader
+void isolation_Right_New() {
+    // Red: negative quadrant (-49.5, -16.8), Blue: positive quadrant (49.5, 16.8)
+    double xSign = (activeTeamColor == BallRed) ? -1.0 : 1.0;
+
+    chassis.set_coordinates(xSign * 49.5, xSign * 16.8, chassis.get_absolute_heading());
+    MatchLoader.set(true);
+
+    // drives to loader
+    chassis.drive_to_point(xSign * 49.5, xSign * 48);
+
+    // intakes from loader
+    chassis.turn_settle_error = 2.0;
+    chassis.turn_settle_time = 300;
+    chassis.turn_timeout = 1000;
+    chassis.turn_to_angle((activeTeamColor == BallRed) ? -90 : 90);
+    chassis.turn_settle_time = 500;
+    chassis.turn_timeout = 1500;
+    chassis.turn_settle_error = 1.0;
+    intakeBalls();
+    chassis.drive_timeout = 500;
+    chassis.drive_settle_time = 0;
+    chassis.drive_distance(11);
+    wait(3.2, sec);
+
+    // scores in long goal
+    chassis.drive_max_voltage = 10;
+    chassis.drive_timeout = 900;
+    chassis.drive_settle_time = 0;
+    chassis.drive_distance(-39.0);
+    chassis.drive_max_voltage = 12;
+    chassis.drive_settle_time = 300;
+    chassis.drive_timeout = 1000;
+    outakeBallsTop();
+    wait(1.9, sec);
+
+    // turns to middle goal
+    intakeBalls();
+    MatchLoader.set(false);
+
+    // drives to middle goal
+    chassis.drive_to_point(xSign * 49.5, xSign * 48);
+    chassis.turn_to_angle((activeTeamColor == BallRed) ? 45 : 225);
+    MatchLoader.set(true);
+
+    // drives into bottom goal and scores
+    chassis.drive_settle_time = 0;
+    chassis.drive_distance(40);
+    outakeBallsBottom();
+    chassis.drive_max_voltage = 6;
+    MatchLoader.set(false);
+    chassis.drive_distance(15);
+}
+
 void auto_Isolation(void) {
   // activeTeamColor = BallRed;
-  isolation_Right_New_RED();
+  isolation_Right_New_BLUE();
   // chassis.set_heading(0);
   // chassis.turn_to_angle(90);
   // chassis.turn_to_angle(180);
@@ -771,7 +879,7 @@ void debugLocalizerTest() {
 }
 
 void pre_auton() {
-  activeTeamColor = BallRed;
+  activeTeamColor = BallBlue;
   MatchLoader.set(false);
   Aligner.set(true);
     // Ensure PID constants are initialized before any autonomous/path calls
@@ -851,6 +959,50 @@ void pre_auton() {
 
 }
 
+void mock_send_link_data() {
+    float test_x = 0.0;
+
+    while(true) {
+        // send fake position that moves over time so you can see it changing
+        link.set_remote_location( test_x, 0.5f, 90.0f, 1, false );
+        test_x += 0.1f;
+        if( test_x > 1.8f ) test_x = -1.8f;  // bounce within field bounds
+
+        // send some fake detections too
+        DETECTION_OBJECT fake_detections[2];
+        fake_detections[0].mapLocation.x = 0.5f;
+        fake_detections[0].mapLocation.y = 0.5f;
+        fake_detections[0].mapLocation.z = 0.0f;
+        fake_detections[1].mapLocation.x = -0.5f;
+        fake_detections[1].mapLocation.y = -0.5f;
+        fake_detections[1].mapLocation.z = 0.0f;
+        link.set_remote_detections( fake_detections, 2 );
+
+        this_thread::sleep_for(100);
+    }
+}
+
+void mock_recieve_link_data() {
+  while(true) {
+    float remote_x, remote_y, remote_heading;
+    bool is_stuck;
+    link.get_remote_location( remote_x, remote_y, remote_heading, is_stuck );
+    printf( "x: %.2f  y: %.2f  h: %.2f  stuck: %d\n", 
+            remote_x, remote_y, remote_heading, (int)is_stuck );
+
+    // also print detections
+    ai::robot_link::detection_pos dets[MAX_LINK_DETECTIONS];
+    int32_t det_count = 0;
+    link.get_remote_detections( dets, det_count );
+    printf( "detections: %d\n", det_count );
+    for( int i = 0; i < det_count; i++ ) {
+        printf( "  [%d] x: %.2f  y: %.2f  z: %.2f\n", i, dets[i].x, dets[i].y, dets[i].z );
+    }
+
+    this_thread::sleep_for(100);
+  }
+}
+
 int main() {
   pre_auton();
 
@@ -867,11 +1019,12 @@ int main() {
   Competition.autonomous(auto_Isolation);
   Competition.drivercontrol(usercontrol);
 
-  // while(true) {
-  //   float remote_x, remote_y, remote_heading;
-  //   link.get_remote_location(remote_x, remote_y, remote_heading);
-  //   printf("", remote_x, remote_y, remote_heading);
-  // }
+  // mock data test
+  if (MANAGER_ROBOT) {
+    mock_send_link_data();
+  } else {
+    mock_recieve_link_data();
+  }
 
   // this_thread::sleep_for(loop_time);
 
@@ -880,9 +1033,9 @@ int main() {
   // int     staleCycles     = 0;
   // bool    jetsonAlerted   = false;
 
-  while (true) {
-    printf("x: %f, y: %f, h: %f \n", chassis.get_X_position(), chassis.get_Y_position(), Inertial.heading());
-  }
+  // while (true) {
+  //   printf("x: %f, y: %f, h: %f \n", chassis.get_X_position(), chassis.get_Y_position(), Inertial.heading());
+  // }
   // while(1) {
   //     // get last map data
   //     jetson_comms.get_data( &local_map );
