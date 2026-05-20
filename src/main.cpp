@@ -411,7 +411,7 @@ void isolation_Right_New_BLUE() {
     // chassis.turn_to_angle(180);
 
     // drives to loader
-    chassis.drive_to_point(49.5, 48);
+    chassis.drive_to_point(49.5, 47);
     // chassis.drive_distance(32);
 
     // intakes from loader
@@ -445,7 +445,7 @@ void isolation_Right_New_BLUE() {
     MatchLoader.set(false);
 
     // drives to middle goal, pushes tower of balls away
-    chassis.drive_to_point(49.5,48);
+    chassis.drive_to_point(49.5,47);
     chassis.turn_to_angle(225);
     MatchLoader.set(true);
 

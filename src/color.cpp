@@ -101,7 +101,7 @@ int onBottomDetectedThread() {
       }
     }
 
-    this_thread::sleep_for(15);
+    this_thread::sleep_for(20);
   }
   return 0;
 }
