@@ -17,7 +17,7 @@ void intakeTask() {
           ZeroStage.stop(coast);
           IntakeFull.broadcast();
         } else if (OpticalBottom1.isNearObject() || OpticalBottom.isNearObject()) {
-          ZeroStage.spin(vex::forward, 85, vex::percent);
+          ZeroStage.spin(vex::forward, 80, vex::percent);
           // ZeroStage.spin(vex::forward, 50, vex::percent);
         } else {
           ZeroStage.spin(vex::forward, 100, vex::percent);
@@ -65,7 +65,7 @@ void intakeTask() {
       case IntakeMode::OUTTAKE_TOP:
         Stopper.set(true);
         if (OpticalBottom1.isNearObject() || OpticalBottom.isNearObject()) {
-          ZeroStage.spin(vex::forward, 50, vex::percent);
+          ZeroStage.spin(vex::forward, 80, vex::percent);
         } else {
           ZeroStage.spin(vex::forward, 100, vex::percent);
         }

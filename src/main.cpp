@@ -49,7 +49,7 @@ motor_group RightDrive = motor_group(RightDriveA, RightDriveB, RightDriveC);
 // Intake motors
 motor FirstStage = motor(PORT8, ratio6_1, false);
 motor SecondStage = motor(PORT11, ratio6_1, false);
-motor ThirdStage = motor(PORT12, ratio6_1, false);
+motor ThirdStage = motor(PORT13, ratio6_1, false);
 motor ZeroStage = motor(PORT1, ratio6_1, false);
 
 // Inertial sensor
@@ -406,12 +406,12 @@ void isolation_Right_New_RED() {
 
 // starts facing loader
 void isolation_Right_New_BLUE() {
-    chassis.set_coordinates(49.5, 16.8, chassis.get_absolute_heading());
+    chassis.set_coordinates(48, 16.8, chassis.get_absolute_heading());
     MatchLoader.set(true);
     // chassis.turn_to_angle(180);
 
     // drives to loader
-    chassis.drive_to_point(49.5, 47);
+    chassis.drive_to_point(48, 47);
     // chassis.drive_distance(32);
 
     // intakes from loader
@@ -426,7 +426,7 @@ void isolation_Right_New_BLUE() {
     intakeBalls();
     chassis.drive_timeout = 500;
     chassis.drive_settle_time = 0;
-    chassis.drive_distance(11);
+    chassis.drive_distance(12);
     wait(3.2, sec);
     
     // scores in long goal
@@ -445,8 +445,9 @@ void isolation_Right_New_BLUE() {
     MatchLoader.set(false);
 
     // drives to middle goal, pushes tower of balls away
-    chassis.drive_to_point(49.5,47);
-    chassis.turn_to_angle(225);
+    chassis.drive_to_point(49,47);
+    // chassis.turn_to_angle(225);
+    chassis.turn_to_point(0,0);
     MatchLoader.set(true);
 
     // drives into bottom goal and scores
@@ -879,7 +880,6 @@ void debugLocalizerTest() {
 }
 
 void pre_auton() {
-  activeTeamColor = BallBlue;
   MatchLoader.set(false);
   Aligner.set(true);
     // Ensure PID constants are initialized before any autonomous/path calls
